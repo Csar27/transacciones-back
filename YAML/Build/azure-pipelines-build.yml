@@ -1,0 +1,77 @@
+# ---------------------------------------------------------------------------
+# Build de la solucion Transacciones
+# ---------------------------------------------------------------------------
+# El .sqlproj NO entra aqui: necesita el MSBuild de Visual Studio y SSDT.
+# Se compila aparte, en su propia etapa (ver SQL/ dentro de este pipeline).
+# ---------------------------------------------------------------------------
+
+trigger:
+  branches:
+    include:
+      - develop
+      - release/*
+  paths:
+    exclude:
+      - '**/*.md'
+      - 'YAML/**'
+
+pr:
+  branches:
+    include:
+      - develop
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  - name: configuration
+    value: 'Release'
+  - name: dotnetVersion
+    value: '8.0.x'
+
+steps:
+  - checkout: self
+    fetchDepth: 0
+
+  - task: UseDotNet@2
+    displayName: 'Instalar .NET SDK'
+    inputs:
+      packageType: sdk
+      version: $(dotnetVersion)
+
+  # La solucion se restaura una vez y se reutiliza en cada etapa. Sin esto,
+  # cada etapa vuelve a descargar los mismos paquetes.
+  - task: DotNetCoreCLI@2
+    displayName: 'Restore'
+    inputs:
+      command: restore
+      projects: 'Transacciones.sln'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Build'
+    inputs:
+      command: build
+      projects: 'Transacciones.sln'
+      arguments: '--configuration $(configuration) --no-restore'
+
+  # Publica solo la Web API y el Function App. Los proyectos de biblioteca se
+  # publican como parte de cada app.
+  - task: DotNetCoreCLI@2
+    displayName: 'Publish WebApi'
+    inputs:
+      command: publish
+      projects: 'Transacciones.WebApi/Transacciones.WebApi.csproj'
+      arguments: '--configuration $(configuration) --no-build --output $(Build.ArtifactStagingDirectory)/webapi'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Publish Func'
+    inputs:
+      command: publish
+      projects: 'Transacciones.Func/Transacciones.Func.csproj'
+      arguments: '--configuration $(configuration) --no-build --output $(Build.ArtifactStagingDirectory)/func'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publicar artefactos'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'

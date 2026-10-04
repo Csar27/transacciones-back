@@ -1,0 +1,39 @@
+-- ===========================================================================
+-- RETIRADO. Este trigger YA NO SE DESPLIEGA.
+-- ===========================================================================
+--
+-- Ni Transacciones.Db.sqlproj ni deploy.sql lo referencian. Se conserva el
+-- fichero solo para dejar constancia de por que se quito, porque volver a
+-- crearlo seria reintroducir un fallo.
+--
+-- QUE HACIA
+--
+--   AFTER UPDATE sobre dbo.Solicitud, con un UPDATE sobre la MISMA tabla para
+--   estampar FechaModificacion y ModificadoPor.
+--
+-- POR QUE ESTA MAL
+--
+-- Un AFTER UPDATE que reescribe la fila que el mismo disparo depende de que
+-- RECURSIVE_TRIGGERS este apagado. Con la opcion activada, el trigger se vuelve
+-- a disparar sobre si mismo y agota el limite de anidamiento.
+--
+-- El fallo es especialmente incomodo por como se manifiesta:
+--
+--   - Solo ocurre al ACTUALIZAR. Insertar funciona, aprobar y anular no.
+--   - Llega al cliente como un 500 "GEN-500", sin detalle: el middleware no
+--     envia la excepcion al navegador, asi que no habia forma de saber que era
+--     esto.
+--   - La auditoria vivia solo en SQL, asi que desde codigo FechaModificacion
+--     llegaba siempre nula y nadie lo notaba.
+--
+-- DONDE ESTA AHORA
+--
+-- SolicitudService.MarcarModificada, en Transacciones.Services. La aplicacion
+-- estampa los mismos dos campos con el mismo criterio que usa para CreadoPor.
+--
+-- QUE HACER SI ESTA INSTALADO EN TU BASE
+--
+--   DROP TRIGGER IF EXISTS [dbo].[trg_Solicitud_Auditoria];
+--
+-- (deploy.sql ya lo incluye; si solo aplicas SQL a mano, ejecuta esa linea.)
+-- ===========================================================================

@@ -1,0 +1,48 @@
+# ---------------------------------------------------------------------------
+# Variables de los tres entornos.
+#
+# Ninguna de estas variables deberia vivir en el repositorio con su valor real.
+# En Azure DevOps se sustituyen por grupos de variables con marca de secreto;
+# este archivo documenta QUE variables existen y para que, no los valores.
+# ---------------------------------------------------------------------------
+
+variables:
+  demo:
+    connectionStringAff: ''      # ABCMultiSettings:ConnectionStringAFF
+    connectionStringSme: ''      # ABCMultiSettings:ConnectionStringSME
+    notificacionesUrl: ''
+    catalogoUrl: ''
+
+  uat:
+    connectionStringAff: ''
+    connectionStringSme: ''
+    notificacionesUrl: ''
+    catalogoUrl: ''
+
+  prod:
+    connectionStringAff: ''
+    connectionStringSme: ''
+    notificacionesUrl: ''
+    catalogoUrl: ''
+
+# ---------------------------------------------------------------------------
+# Recordatorios de configuracion
+# ---------------------------------------------------------------------------
+#
+# · Las DOS connection strings deben existir. Si falta una, la aplicacion no
+#   arranca: es deliberado. Un arranque fallido en el despliegue se ve; una
+#   peticion que escribe en la base equivocada, no.
+#
+# · AutoMapper 15+ exige LicenseKey en "AutoMapper:LicenseKey". Vacia funciona
+#   en desarrollo; antes de produccion hay que registrarla.
+#
+# · El proyecto SSDT y el script deploy.sql contienen el mismo esquema. Si
+#   cambias uno, cambia el otro. Es duplicacion incomoda, pero es lo que permite
+#   aplicar el esquema sin Visual Studio.
+#
+# · function.json / host.json no lleva cadenas de conexion: van en los
+#   Application Settings del Function App, con el prefijo
+#   "ABCMultiSettings:".
+#
+# · CORS: "Cors:Origenes" con lista blanca explicita. Sin ella configurada, el
+#   middleware cierra el acceso; no se abre por omision.

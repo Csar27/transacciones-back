@@ -1,0 +1,34 @@
+{
+  "version": "2.0",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request"
+      }
+    },
+    "logLevel": {
+      "default": "Information",
+      "Host.Results": "Information",
+      "Function": "Information"
+    }
+  },
+  "extensions": {
+    "queues": {
+      "maxPollingInterval": "00:00:02",
+      "visibilityTimeout": "00:00:30",
+      "batchSize": 16,
+      "maxDequeueCount": 5,
+      "newBatchThreshold": 8
+    },
+    "serviceBus": {
+      "maxAutoLockRenewalDuration": "00:05:00",
+      "autoLockOffset": "00:00:00",
+      "defaultMessageTimeToLive": "01:00:00",
+      "defaultPrefetchCount": 0
+    },
+    "http": {
+      "routePrefix": "api"
+    }
+  }
+}

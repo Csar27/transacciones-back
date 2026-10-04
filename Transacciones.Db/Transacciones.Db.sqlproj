@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Proyecto SQL de SSDT.
+
+  Compila con el MSBuild de Visual Studio, no con `dotnet build`:
+
+    msbuild Transacciones.Db\Transacciones.Db.sqlproj /p:Configuration=Release
+
+  Razon: un .sqlproj necesita Microsoft.Data.Tools.Schema.SqlTasks.targets, que
+  solo viene con SSDT instalado en Visual Studio. El SDK de dotnet no lo trae.
+
+  Si se abre la carpeta en VS 2022+ y se anade el proyecto a la solucion, VS lo
+  compila solo en cada build de la solucion.
+-->
+<Project ToolsVersion="Current" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"
+          Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{7C3A1E52-9B41-4D6A-8F02-1A5B6C7D8E90}</ProjectGuid>
+    <OutputType>Dbc</OutputType>
+    <RootNamespace>TransaccionesDb</RootNamespace>
+    <AssemblyName>Transacciones.Db</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <DatabaseGUID>{2F8B4D16-5E73-4A9C-B0D1-7C2E9F3A5B48}</DatabaseGUID>
+    <ModelCollation>1033, CI</ModelCollation>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      DSP: proveedor de esquema de SQL Server 2022.
+      Para Azure SQL Database sirve el mismo: es motor relacional compatible.
+      Si la base fuese de una version anterior, bajar a Sql150 / Sql140.
+    -->
+    <DSP>Microsoft.Data.Tools.Schema.Sql160DatabaseSchemaProvider</DSP>
+
+    <!-- Visual Studio 18 = version 18.0. Solo se aplica si no lo trae ya el
+         MSBuild de VS, que es el caso normal. -->
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">18.0</VisualStudioVersion>
+
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>.\bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>.\bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+
+  <!--
+    SSDT de VS 18 ya no reparte los targets en Microsoft.Common.props /
+    Microsoft.Common.targets: todo esta en SqlTasks.targets. Importar los
+    nombres antiguos no falla de forma visible, simplemente no importa nada y el
+    error sale despues como "el destino Build no existe en el proyecto".
+  -->
+  <Import Project="$(VSToolsPath)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets"
+          Condition="Exists('$(VSToolsPath)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')" />
+
+  <ItemGroup>
+    <Folder Include="Security\" />
+    <Folder Include="dbo\" />
+    <Folder Include="dbo\Sequences\" />
+    <Folder Include="dbo\StoredProcedures\" />
+    <Folder Include="dbo\Tables\" />
+    <Folder Include="dbo\Triggers\" />
+    <Folder Include="dbo\UserDefinedTypes\" />
+    <Folder Include="dbo\Views\" />
+    <Folder Include="postdeployment\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Tablas -->
+    <Build Include="dbo\Tables\EventoProcesado.sql" />
+    <Build Include="dbo\Tables\EstadoSolicitud.sql" />
+    <Build Include="dbo\Tables\Solicitud.sql" />
+
+    <!-- Tipos definidos por el usuario. Van ANTES que las tablas que los usan;
+         SSDT ordena por dependencias, pero declararlos aqui evita sorpresas. -->
+    <Build Include="dbo\UserDefinedTypes\CodigoEstado.sql" />
+
+    <!-- Procedimientos almacenados -->
+    <Build Include="dbo\StoredProcedures\usp_Solicitud_GenerarCodigo.sql" />
+    <Build Include="dbo\StoredProcedures\usp_Solicitud_MarcarVencidas.sql" />
+    <Build Include="dbo\StoredProcedures\usp_Solicitud_ObtenerPorId.sql" />
+
+    <!--
+         Secuencias. Va DESPUES de los procedimientos en la lista, pero SSDT
+         ordena por dependencias reales, no por orden de declaracion.
+    -->
+    <Build Include="dbo\Sequences\SeqSolicitudCodigo.sql" />
+
+    <!-- Vistas -->
+    <Build Include="dbo\Views\vw_SolicitudesPendientes.sql" />
+
+    <!--
+         NO hay disparadores. El que existia (trg_Solicitud_Auditoria) hacia un
+         UPDATE sobre la misma tabla que lo habia disparado, lo que solo funciona
+         con RECURSIVE_TRIGGERS apagado y revienta en cuanto se activa. La
+         auditoria la estampa SolicitudService. Ver la nota en deploy.sql.
+    -->
+
+    <!-- Scripts de post-despliegue y seguridad: SSDT los recoge aparte. -->
+    <None Include="postdeployment\postdeployment.sql" />
+    <None Include="Security\Permisos.sql" />
+  </ItemGroup>
+
+  <!--
+    Los targets de publicacion (Deploy, SqlDeploy) YA vienen dentro de
+    SqlTasks.targets. Importarlos otra vez produce MSB4011 y no aporta nada.
+  -->
+
+</Project>

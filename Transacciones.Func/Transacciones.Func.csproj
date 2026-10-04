@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Azure Functions (worker aislado, net8.0).
+    Compila con dotnet build. Para ejecutarlo en local hacen falta los
+    Azure Functions Core Tools, que no forman parte de este repositorio.
+
+    Worker y Sdk van FIJADOS, pero NO a la misma version, y no por descuido: sus
+    lineas de version divergen.
+      - Microsoft.Azure.Functions.Worker     1.x termina en 1.19.0 (1.18.1 no existe)
+      - Microsoft.Azure.Functions.Worker.Sdk 1.x termina en 1.18.1 (1.19 no existe)
+    No hay version comun, asi que se toma el tope de cada una. Pedir una version
+    inexistente hace que NuGet resuelva otra y avise con NU1603.
+
+    Se usa el host clasico (HostBuilder) y no FunctionsApplication.CreateBuilder:
+    este ultimo viene de Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore
+    y sigue siendo internal, asi que no es usable desde codigo.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Transacciones.Func</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.19.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.18.1" OutputItemType="Analyzer" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.*" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.*" />
+    <!-- ServiceBusTrigger del worker aislado -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.ServiceBus" Version="5.*" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="Dapper" Version="2.1.66" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="host.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="local.settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Transacciones.Core\Transacciones.Core.csproj" />
+    <ProjectReference Include="..\Transacciones.CrossCutting\Transacciones.CrossCutting.csproj" />
+  </ItemGroup>
+
+</Project>

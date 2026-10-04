@@ -1,0 +1,54 @@
+# ---------------------------------------------------------------------------
+# Pruebas
+# ---------------------------------------------------------------------------
+# Ejecuta las pruebas y sube los resultados. Un fallo aqui debe parar el
+# despliegue: es mas barato que descubrir en produccion que un cambio rompio
+# una transicion de estado.
+# ---------------------------------------------------------------------------
+
+trigger: none
+
+pr:
+  branches:
+    include:
+      - develop
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  - name: configuration
+    value: 'Release'
+  - name: testProject
+    value: 'Transacciones.Tests/Transacciones.Tests.csproj'
+
+steps:
+  - checkout: self
+
+  - task: UseDotNet@2
+    displayName: 'Instalar .NET SDK'
+    inputs:
+      packageType: sdk
+      version: '8.0.x'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Restore'
+    inputs:
+      command: restore
+      projects: '$(testProject)'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Test'
+    inputs:
+      command: test
+      projects: '$(testProject)'
+      arguments: '--configuration $(configuration) --logger trx --results-directory $(Build.ArtifactStagingDirectory)/tests'
+      publishTestResults: true
+
+  - task: PublishTestResults@2
+    displayName: 'Publicar resultados'
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: '**/*.trx'
+      testRunTitle: 'Pruebas Transacciones'
+      failTaskOnFailedTests: true

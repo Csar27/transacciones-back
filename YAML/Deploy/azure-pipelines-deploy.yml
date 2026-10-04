@@ -1,0 +1,126 @@
+# ---------------------------------------------------------------------------
+# Despliegue
+# ---------------------------------------------------------------------------
+# Antes de tocar un entorno: lee el README, seccion "Despliegue".
+#
+# El orden importa y no es negociable:
+#   1. Esquema SQL (proyecto SSDT o deploy.sql)
+#   2. Web API
+#   3. Function App
+#
+# Desplegar la API antes que el esquema hace que la version nueva encuentre
+# objetos que todavia no existen.
+# ---------------------------------------------------------------------------
+
+trigger: none
+
+pool:
+  vmImage: 'windows-latest'
+
+parameters:
+  - name: environment
+    type: string
+    default: 'demo'
+    values:
+      - demo
+      - uat
+      - prod
+
+variables:
+  - name: configuration
+    value: 'Release'
+  - name: resourceGroup
+    value: 'rg-transacciones-$(environment)'
+  - name: webAppName
+    value: 'app-transacciones-$(environment)'
+  - name: funcAppName
+    value: 'func-transacciones-$(environment)'
+
+stages:
+  - stage: Deploy
+    displayName: 'Desplegar en $(environment)'
+    jobs:
+      - job: Publicar
+        displayName: 'Publicar y desplegar'
+        environment: $(environment)
+
+        steps:
+          - checkout: self
+
+          - task: UseDotNet@2
+            displayName: 'Instalar .NET SDK'
+            inputs:
+              packageType: sdk
+              version: '8.0.x'
+
+          # ---- 1. Esquema -------------------------------------------------
+          # El proyecto SSDT se despliega con MSBuild de Visual Studio. Si el
+          # agente no tiene SSDT, usar deploy.sql con sqlcmd:
+          #   sqlcmd -S $(server) -d $(database) -U $(user) -P $(password) -b -i deploy.sql
+          - task: AzureResourceManagerTemplateDeployment@3
+            displayName: 'Placeholder del esquema (configurar segun entorno)'
+            inputs:
+              action: 'Create Or Update Resource Group'
+              azureResourceManagerConnection: 'sc-$(environment)'
+              location: '$(location)'
+              templateLocation: 'Inline parameter'
+              csmFile: 'Transacciones.Db/deploy.sql'
+              deploymentMode: 'Incremental'
+
+          # ---- 2. Web API -------------------------------------------------
+          - task: DotNetCoreCLI@2
+            displayName: 'Publicar WebApi'
+            inputs:
+              command: publish
+              projects: 'Transacciones.WebApi/Transacciones.WebApi.csproj'
+              arguments: '--configuration $(configuration) --output $(Build.ArtifactStagingDirectory)/webapi'
+
+          - task: AzureWebApp@1
+            displayName: 'Desplegar Web API'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webApp'
+              appName: '$(webAppName)'
+              package: '$(Build.ArtifactStagingDirectory)/webapi'
+
+          # ---- 3. Function App -------------------------------------------
+          - task: DotNetCoreCLI@2
+            displayName: 'Publicar Func'
+            inputs:
+              command: publish
+              projects: 'Transacciones.Func/Transacciones.Func.csproj'
+              arguments: '--configuration $(configuration) --output $(Build.ArtifactStagingDirectory)/func'
+
+          - task: AzureFunctionApp@1
+            displayName: 'Desplegar Function App'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'functionAppLinux'
+              appName: '$(funcAppName)'
+              package: '$(Build.ArtifactStagingDirectory)/func'
+
+          # ---- 4. Comprobacion -------------------------------------------
+          # Sin esto, un despliegue "correcto" con la app caida se descubre
+          # cuando un usuario llama.
+          - task: PowerShell@2
+            displayName: 'Verificar health check'
+            inputs:
+              targetType: 'inline'
+              script: |
+                $url = "$(webAppName).azurewebsites.net/api/healthcheck"
+                for ($i = 0; $i -lt 10; $i++) {
+                    Start-Sleep -Seconds 10
+                    try {
+                        $r = Invoke-WebRequest -Uri "https://$url" -UseBasicParsing -TimeoutSec 20
+                        if ($r.StatusCode -eq 200) {
+                            Write-Host "Health check OK: $($r.Content)"
+                            exit 0
+                        }
+                        Write-Host "Intento $($i+1): HTTP $($r.StatusCode)"
+                    }
+                    catch {
+                        Write-Host "Intento $($i+1): $($_.Exception.Message)"
+                    }
+                }
+                Write-Error "El health check no respondio correctamente tras 10 intentos."
+                exit 1

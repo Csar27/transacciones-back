@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pruebas. Carpetas espejo de la produccion.
+    FluentAssertions 7.x: la 8.0 paso a licencia comercial.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Transacciones.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Transacciones.WebApi\Transacciones.WebApi.csproj" />
+    <ProjectReference Include="..\Transacciones.Core\Transacciones.Core.csproj" />
+    <ProjectReference Include="..\Transacciones.Services\Transacciones.Services.csproj" />
+    <ProjectReference Include="..\Transacciones.Data\Transacciones.Data.csproj" />
+    <ProjectReference Include="..\Transacciones.External\Transacciones.External.csproj" />
+    <ProjectReference Include="..\Transacciones.CrossCutting\Transacciones.CrossCutting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="FluentAssertions" Version="7.2.0" />
+    <!-- Levanta la API de verdad (WebApplicationFactory<Program>) para comprobar
+         el contenedor de DI, MVC, Swagger, Quartz y los health checks. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.*" />
+    <!--
+      Logging.Abstractions NO se fija a proposito. AutoMapper 15.1.1 arrastra la
+      version 10.0.0; fijarla en 8.0.x aqui produce NU1605 (degradacion), que el
+      SDK de .NET trata como error de build.
+    -->
+  </ItemGroup>
+
+</Project>

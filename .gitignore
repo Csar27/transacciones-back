@@ -1,0 +1,49 @@
+# ===========================================================================
+# Backend .NET — repositorio propio.
+#
+# Antes este archivo estaba pensado para un monorepo y cubria tambien
+# frontend\. Con el frontend en su propio repositorio, esas reglas son ruido:
+# aqui no hay npm. Se quitan para que quien lo lea no busque un node_modules\
+# que no existe.
+#
+# Lo que SI se queda: .vs\, que se acaba de anadir porque al mover el .sln
+# dentro de backend\, Visual Studio crea la.cache aqui. Sin esta regla,
+# .vs\config\applicationhost.config —con rutas absolutas a esta maquina—
+# entraria en el repositorio.
+# ===========================================================================
+
+# --- Artefactos de compilacion --------------------------------------------
+bin/
+obj/
+publish/
+TestResults/
+
+# Cache de Visual Studio: rutas absolutas a la maquina, nunca versionable
+.vs/
+*.user
+*.suo
+*.sw?
+
+# --- Secretos: NUNCA subir ------------------------------------------------
+entornos.local.json
+appsettings.*.local.json
+local.settings.json
+
+# appsettings.json SI se versiona: lleva Trusted_Connection y Token vacio.
+# Los valores reales van en appsettings.*.local.json o en los Application
+# Settings del App Service. Ver backend\YAML\Config\variables.yml.
+
+# --- Logs -----------------------------------------------------------------
+logs/
+*.log
+
+# --- SSDT / DAC -----------------------------------------------------------
+*.dacpac
+*.sqlproj.user
+
+# --- Editores y sistema ---------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
